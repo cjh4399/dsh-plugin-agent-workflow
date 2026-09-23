@@ -4,6 +4,11 @@
 
 插件不会替换或修改 DeepSeek Harness 内置的“轨迹”功能。
 
+> **来源与署名**：本项目基于 [xuanyuanzhifeng/dsh-plugin-agent-workflow](https://github.com/xuanyuanzhifeng/dsh-plugin-agent-workflow)（MIT）适配而来，
+> 原项目版权归其作者所有，许可条款见 [LICENSE](LICENSE)。
+> 本仓库相对上游的改动：适配 `dsh@0.1.7-alpha.2`，并改为以**预构建产物交付**，
+> 使插件可以直接通过 DSH 官方的「添加插件」安装而无需构建审批。
+
 ## 界面预览
 
 ### 工作流总览
@@ -38,66 +43,102 @@
 
 | 插件版本 | DSH 版本 |
 | --- | --- |
+| `0.2.0+local-0.1.7` | `dsh@0.1.7-alpha.2` |
 | `0.2.x` | `dsh@0.1.5-alpha.1` |
 | `0.1.x` | `dsh@0.1.0-rc.8` |
 
 DeepSeek Harness 仍处于预发布阶段，不同 RC 版本的客户端接口可能发生变化。升级 DSH 后，需要同时安装与新版本适配的插件版本。
 
+> **本地适配说明（`0.2.0+local-0.1.7`）**：此构建为本地适配版，非上游发布。
+> 为在 `dsh@0.1.7-alpha.2` 上运行做了两处改动：
+> 1. `package.json` 中 `@deepseek-ai/dsh-*` 的 peer/dev 依赖由 `0.1.5-alpha.1` 提升为 `0.1.7-alpha.2`；
+> 2. `src/client/WorkflowView.tsx` 的 `request?.provenance?.model` 改为 `request?.providerMetadata?.model`
+>    —— `0.1.7` 的 `RequestView` 移除了 `provenance`，`providerMetadata`（`{ provider, model }`）是等价的请求身份字段。
+>
+> `SessionSnapshot` 在 `0.1.7` 已改为不含 Conversation target 数据（`chat` / `turnTimings` 移入 Chat 目标快照）；
+> 本插件对它的依赖只有 `hasMore` 与 `loadingOlder`，两者仍在，故无需进一步改动。
+
 ## 安装
 
-### 安装本地 `.tgz` 包
+`lib/`（浏览器插件包、宿主入口与类型声明）是**已构建产物并随仓库提交**，安装过程不执行任何
+构建脚本。因此可以直接用 DSH Web 的「设置 → 插件 → 添加插件」，不会出现
+「有依赖的安装脚本需要你允许后才能继续」的拦截，也不需要往 profile 的 `allowBuilds` 里放行。
 
-假设安装包位于当前目录：
+下面三种输入形式都可以直接填进「添加插件」对话框。
+
+### 方式一：本地插件目录
+
+在「添加插件」里填入本机插件的**绝对路径**：
+
+```
+D:\dshworkspace\dsh\dsh0922\dsh-plugin-agent-workflow
+```
+
+等价的命令行形式：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
   --profile web \
-  add ./dsh-plugin-agent-workflow-0.2.0.tgz \
+  add "D:\dshworkspace\dsh\dsh0922\dsh-plugin-agent-workflow" \
   --workspace-root
 ```
 
-检查安装结果：
+本地目录安装记录为 `link:`，插件与源码目录保持关联；移动或删除该目录后需要重新安装。
+
+### 方式二：GitHub 仓库地址
+
+`lib/` 已提交，因此可以直接从 Git 安装（pnpm 不会再尝试构建）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
   --profile web \
-  list --depth 0
-```
-
-列表中出现 `dsh-plugin-agent-workflow 0.2.0` 表示安装成功。重启 Web UI 后即可看到“工作流”标签页：
-
-```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 web
-```
-
-### 从 GitHub 安装
-
-仓库发布 `v0.2.0` 标签后，可以直接安装固定版本。`web` profile：
-
-```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
-  --profile web \
-  add github:xuanyuanzhifeng/dsh-plugin-agent-workflow#v0.2.0 \
+  add github:xuanyuanzhifeng/dsh-plugin-agent-workflow \
   --workspace-root
 ```
 
-`video` profile 使用相同插件版本：
+固定 commit 或 tag 可避免安装内容随分支变化：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
-  --profile video \
-  add github:xuanyuanzhifeng/dsh-plugin-agent-workflow#v0.2.0 \
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
+  --profile web \
+  add "github:xuanyuanzhifeng/dsh-plugin-agent-workflow#<commit-or-tag>" \
   --workspace-root
-
-pnpm dsh --profile video
 ```
 
-固定 Release 标签或 commit 可以避免安装内容随分支变化。只有在信任源码的情况下，才应允许包管理器执行 Git 依赖的构建脚本。
+### 方式三：本地 `.tgz` 包
+
+```sh
+pnpm pack    # 产出 dsh-plugin-agent-workflow-0.2.1.tgz
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
+  --profile web \
+  add ./dsh-plugin-agent-workflow-0.2.1.tgz \
+  --workspace-root
+```
+
+### 方式四：npm 包名（需先发布到 npm）
+
+包名即 `dsh-plugin-agent-workflow`。发布后可以直接填包名：
+
+```sh
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
+  --profile web \
+  add dsh-plugin-agent-workflow \
+  --workspace-root
+```
+
+### 验证
+
+```sh
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin --profile web list --depth 0
+```
+
+列表中出现 `dsh-plugin-agent-workflow 0.2.1` 表示安装成功。刷新或重启 Web UI 后，会话顶部的
+「对话 / 轨迹」旁边会出现「工作流」标签页。
 
 ## 卸载
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
+npx --yes @deepseek-ai/dsh@0.1.7-alpha.2 plugin \
   --profile web \
   remove dsh-plugin-agent-workflow \
   --workspace-root
@@ -112,11 +153,15 @@ npx --yes @deepseek-ai/dsh@0.1.5-alpha.1 plugin \
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test
-pnpm pack
+pnpm test          # 先 build，再跑单测
+pnpm run build     # 生成 lib/（浏览器包 + 宿主入口 + 类型声明）
+pnpm run verify:dist   # build 后断言 lib/ 与提交内容一致
+pnpm pack              # 生成 dsh-plugin-agent-workflow-<version>.tgz
 ```
 
-`pnpm test` 会先构建宿主入口和浏览器插件包。`pnpm pack` 生成可直接安装的 `dsh-plugin-agent-workflow-<version>.tgz` 文件。
+> **改了 `src/` 必须重新 `pnpm run build` 并把 `lib/` 一起提交。**
+> `lib/` 是仓库的一部分，安装端不再构建；`.github/workflows/verify-dist.yml`
+> 会在 CI 中执行 `git diff --exit-code -- lib`，产物过期即失败。
 
 ## 已知限制
 

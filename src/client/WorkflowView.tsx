@@ -210,7 +210,7 @@ function RequestCard({
   t: PropsLocale<'workflow'>['t']
 }) {
   const request = call.request
-  const model = request?.requestConfig?.model ?? request?.provenance?.model
+  const model = request?.requestConfig?.model ?? request?.providerMetadata?.model
   const systemCount = request?.prompt?.system.trim() === '' || request?.prompt?.system === undefined ? 0 : 1
   const messageCount = call.messages.length
   const tools = request?.prompt?.tools.length ?? 0

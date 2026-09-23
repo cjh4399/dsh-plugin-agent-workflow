@@ -1,0 +1,5 @@
+# Committed build artifacts: keep their bytes exactly as the bundler emits
+# them, so a rebuild on any platform reproduces the tracked files and
+# `pnpm run verify:dist` can detect a stale lib/.
+lib/** -text
+*.tgz binary
